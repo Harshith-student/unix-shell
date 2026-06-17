@@ -14,7 +14,7 @@ public class Main {
                 break;
             }
             else if(input.startsWith("type")){
-                if((input.substring(5) == "echo") || (input.substring(5) == "exit") || (input.substring(5) == "type")){
+                if(((input.substring(5) == "echo" || input.substring(5) == "exit") || input.substring(5) == "type")){
                     System.out.println(input.substring(5)+" is a shell builtin");
                 }
                 else{
