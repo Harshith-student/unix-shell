@@ -34,7 +34,7 @@ public class Main {
     public static String type(String command){
         String commands[] = {"exit","type","echo"};
         String path = System.getenv("PATH");
-        String pathDirs[] = path.split(";");
+        String pathDirs[] = path.split(File.pathSeparator);
 
         for(int i = 0; i<commands.length; i++){
             if(commands[i].equals(command)){
