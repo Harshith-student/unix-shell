@@ -178,6 +178,7 @@ public class Main {
                         System.out.println("cd: " + targetPath + ": No such file or directory");
                     }
                 } else if (cmd.equals("jobs")) {
+                    List<Job> nextJobsList = new ArrayList<>();
                     int size = jobsList.size();
                     for (int i = 0; i < size; i++) {
                         Job job = jobsList.get(i);
@@ -187,9 +188,16 @@ public class Main {
                         } else if (i == size - 2) {
                             marker = '-';
                         }
-                        String cmdStr = String.join(" ", job.command) + " &";
-                        System.out.printf("[%d]%c  %-24s%s\n", job.jobNumber, marker, job.status, cmdStr);
+                        if (job.process.isAlive()) {
+                            String cmdStr = String.join(" ", job.command) + " &";
+                            System.out.printf("[%d]%c  %-24s%s\n", job.jobNumber, marker, "Running", cmdStr);
+                            nextJobsList.add(job);
+                        } else {
+                            String cmdStr = String.join(" ", job.command);
+                            System.out.printf("[%d]%c  %-24s%s\n", job.jobNumber, marker, "Done", cmdStr);
+                        }
                     }
+                    jobsList = nextJobsList;
                 }
                 else if(getExecutable(cmd) != null){
                     ProcessBuilder pb = new ProcessBuilder(parsedArgs);
