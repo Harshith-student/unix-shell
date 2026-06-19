@@ -23,6 +23,8 @@ public class Main {
                 System.out.println(rem);
             } else if (cmd.equals("type")) {
                 System.out.println(type(rem));
+            } else if (cmd.equals("pwd")) {
+                System.out.println(System.getProperty("user.dir"));
             }
             else if(getExecutable(cmd) != null){
                 Process process = Runtime.getRuntime().exec(command.split(" "));
@@ -35,7 +37,7 @@ public class Main {
          sc.close();
     }
     public static String type(String command){
-        String commands[] = {"exit","type","echo"};
+        String commands[] = {"exit","type","echo","pwd"};
         String path = System.getenv("PATH");
         String pathDirs[] = path.split(File.pathSeparator);
 
