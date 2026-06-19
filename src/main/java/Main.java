@@ -115,6 +115,7 @@ public class Main {
         List<String> args = new ArrayList<>();
         StringBuilder currentArg = new StringBuilder();
         boolean inSingleQuotes = false;
+        boolean inDoubleQuotes = false;
         boolean hasContent = false;
 
         for (int i = 0; i < input.length(); i++) {
@@ -128,9 +129,19 @@ public class Main {
                     currentArg.append(c);
                     hasContent = true;
                 }
+            } else if (inDoubleQuotes) {
+                if (c == '"') {
+                    inDoubleQuotes = false;
+                    hasContent = true;
+                } else {
+                    currentArg.append(c);
+                    hasContent = true;
+                }
             } else {
                 if (c == '\'') {
                     inSingleQuotes = true;
+                } else if (c == '"') {
+                    inDoubleQuotes = true;
                 } else if (Character.isWhitespace(c)) {
                     if (hasContent || currentArg.length() > 0) {
                         args.add(currentArg.toString());
