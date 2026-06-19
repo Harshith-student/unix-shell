@@ -11,6 +11,25 @@ import java.util.ArrayList;
 public class Main {
     private static String currentDir = System.getProperty("user.dir");
 
+    public static class Job {
+        public int jobNumber;
+        public long pid;
+        public String status;
+        public List<String> command;
+        public Process process;
+
+        public Job(int jobNumber, long pid, String status, List<String> command, Process process) {
+            this.jobNumber = jobNumber;
+            this.pid = pid;
+            this.status = status;
+            this.command = command;
+            this.process = process;
+        }
+    }
+
+    private static List<Job> jobsList = new ArrayList<>();
+    private static int nextJobNumber = 1;
+
     public static void main(String[] args) throws Exception {
          
          Scanner sc = new Scanner(System.in);
@@ -24,6 +43,15 @@ public class Main {
             List<Token> tokens = parseArguments(command);
             if (tokens.isEmpty()) {
                 continue;
+            }
+
+            boolean isBackground = false;
+            if (!tokens.isEmpty()) {
+                Token lastToken = tokens.get(tokens.size() - 1);
+                if (!lastToken.quoted && lastToken.text.equals("&")) {
+                    isBackground = true;
+                    tokens.remove(tokens.size() - 1);
+                }
             }
 
             String redirectFile = null;
@@ -183,7 +211,14 @@ public class Main {
                         pb.redirectError(ProcessBuilder.Redirect.INHERIT);
                     }
                     Process process = pb.start();
-                    process.waitFor();
+                    if (isBackground) {
+                        int jobNum = nextJobNumber++;
+                        long pid = process.pid();
+                        System.out.println("[" + jobNum + "] " + pid);
+                        jobsList.add(new Job(jobNum, pid, "Running", parsedArgs, process));
+                    } else {
+                        process.waitFor();
+                    }
                 }
                 else {
                     System.out.println(cmd + ": command not found");
