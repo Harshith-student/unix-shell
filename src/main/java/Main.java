@@ -37,6 +37,7 @@ public class Main {
         String pathDirs[] = path.split(File.pathSeparator);
          
           while (true) {
+            reapJobs(false);
             System.out.print("$ ");
             String command = sc.nextLine();
 
@@ -178,26 +179,7 @@ public class Main {
                         System.out.println("cd: " + targetPath + ": No such file or directory");
                     }
                 } else if (cmd.equals("jobs")) {
-                    List<Job> nextJobsList = new ArrayList<>();
-                    int size = jobsList.size();
-                    for (int i = 0; i < size; i++) {
-                        Job job = jobsList.get(i);
-                        char marker = ' ';
-                        if (i == size - 1) {
-                            marker = '+';
-                        } else if (i == size - 2) {
-                            marker = '-';
-                        }
-                        if (job.process.isAlive()) {
-                            String cmdStr = String.join(" ", job.command) + " &";
-                            System.out.printf("[%d]%c  %-24s%s\n", job.jobNumber, marker, "Running", cmdStr);
-                            nextJobsList.add(job);
-                        } else {
-                            String cmdStr = String.join(" ", job.command);
-                            System.out.printf("[%d]%c  %-24s%s\n", job.jobNumber, marker, "Done", cmdStr);
-                        }
-                    }
-                    jobsList = nextJobsList;
+                    reapJobs(true);
                 }
                 else if(getExecutable(cmd) != null){
                     ProcessBuilder pb = new ProcessBuilder(parsedArgs);
@@ -262,6 +244,32 @@ public class Main {
         }
          sc.close();
     }
+
+    public static void reapJobs(boolean printRunning) {
+        List<Job> nextJobsList = new ArrayList<>();
+        int size = jobsList.size();
+        for (int i = 0; i < size; i++) {
+            Job job = jobsList.get(i);
+            char marker = ' ';
+            if (i == size - 1) {
+                marker = '+';
+            } else if (i == size - 2) {
+                marker = '-';
+            }
+            if (job.process.isAlive()) {
+                if (printRunning) {
+                    String cmdStr = String.join(" ", job.command) + " &";
+                    System.out.printf("[%d]%c  %-24s%s\n", job.jobNumber, marker, "Running", cmdStr);
+                }
+                nextJobsList.add(job);
+            } else {
+                String cmdStr = String.join(" ", job.command);
+                System.out.printf("[%d]%c  %-24s%s\n", job.jobNumber, marker, "Done", cmdStr);
+            }
+        }
+        jobsList = nextJobsList;
+    }
+
     public static String type(String command){
         String commands[] = {"exit","type","echo","pwd","cd","jobs"};
         String path = System.getenv("PATH");
