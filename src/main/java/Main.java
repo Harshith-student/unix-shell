@@ -27,6 +27,7 @@ public class Main {
             }
 
             String redirectFile = null;
+            String redirectErrFile = null;
             for (int i = 0; i < tokens.size(); i++) {
                 Token t = tokens.get(i);
                 if (!t.quoted && (t.text.equals(">") || t.text.equals("1>"))) {
@@ -34,7 +35,14 @@ public class Main {
                         redirectFile = tokens.get(i + 1).text;
                         tokens.remove(i + 1);
                         tokens.remove(i);
-                        break;
+                        i -= 1;
+                    }
+                } else if (!t.quoted && t.text.equals("2>")) {
+                    if (i + 1 < tokens.size()) {
+                        redirectErrFile = tokens.get(i + 1).text;
+                        tokens.remove(i + 1);
+                        tokens.remove(i);
+                        i -= 1;
                     }
                 }
             }
@@ -47,8 +55,11 @@ public class Main {
             String cmd = parsedArgs.get(0);
 
             PrintStream originalOut = System.out;
+            PrintStream originalErr = System.err;
             FileOutputStream fos = null;
             PrintStream fileOut = null;
+            FileOutputStream fosErr = null;
+            PrintStream fileErr = null;
             try {
                 if (redirectFile != null) {
                     File file = new File(redirectFile);
@@ -62,6 +73,20 @@ public class Main {
                     fos = new FileOutputStream(file);
                     fileOut = new PrintStream(fos);
                     System.setOut(fileOut);
+                }
+
+                if (redirectErrFile != null) {
+                    File file = new File(redirectErrFile);
+                    if (!file.isAbsolute() && !redirectErrFile.startsWith("/")) {
+                        file = new File(currentDir, redirectErrFile);
+                    }
+                    File parent = file.getParentFile();
+                    if (parent != null && !parent.exists()) {
+                        parent.mkdirs();
+                    }
+                    fosErr = new FileOutputStream(file);
+                    fileErr = new PrintStream(fosErr);
+                    System.setErr(fileErr);
                 }
 
                 if (cmd.equals("exit")) {
@@ -117,7 +142,16 @@ public class Main {
                     } else {
                         pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
                     }
-                    pb.redirectError(ProcessBuilder.Redirect.INHERIT);
+
+                    if (redirectErrFile != null) {
+                        File file = new File(redirectErrFile);
+                        if (!file.isAbsolute() && !redirectErrFile.startsWith("/")) {
+                            file = new File(currentDir, redirectErrFile);
+                        }
+                        pb.redirectError(ProcessBuilder.Redirect.to(file));
+                    } else {
+                        pb.redirectError(ProcessBuilder.Redirect.INHERIT);
+                    }
                     Process process = pb.start();
                     process.waitFor();
                 }
@@ -132,6 +166,14 @@ public class Main {
                     try { fos.close(); } catch (IOException e) {}
                 }
                 System.setOut(originalOut);
+
+                if (fileErr != null) {
+                    fileErr.close();
+                }
+                if (fosErr != null) {
+                    try { fosErr.close(); } catch (IOException e) {}
+                }
+                System.setErr(originalErr);
             }
         }
          sc.close();
