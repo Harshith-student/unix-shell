@@ -178,7 +178,15 @@ public class Main {
                         System.out.println("cd: " + targetPath + ": No such file or directory");
                     }
                 } else if (cmd.equals("jobs")) {
-                    // Empty implementation for jobs command
+                    for (int i = 0; i < jobsList.size(); i++) {
+                        Job job = jobsList.get(i);
+                        char marker = ' ';
+                        if (i == jobsList.size() - 1) {
+                            marker = '+';
+                        }
+                        String cmdStr = String.join(" ", job.command) + " &";
+                        System.out.printf("[%d]%c  %-24s%s\n", job.jobNumber, marker, job.status, cmdStr);
+                    }
                 }
                 else if(getExecutable(cmd) != null){
                     ProcessBuilder pb = new ProcessBuilder(parsedArgs);
