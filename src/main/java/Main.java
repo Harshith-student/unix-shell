@@ -130,7 +130,22 @@ public class Main {
                     hasContent = true;
                 }
             } else if (inDoubleQuotes) {
-                if (c == '"') {
+                if (c == '\\') {
+                    if (i + 1 < input.length()) {
+                        char nextC = input.charAt(i + 1);
+                        if (nextC == '"' || nextC == '\\') {
+                            currentArg.append(nextC);
+                            i++;
+                            hasContent = true;
+                        } else {
+                            currentArg.append(c);
+                            hasContent = true;
+                        }
+                    } else {
+                        currentArg.append(c);
+                        hasContent = true;
+                    }
+                } else if (c == '"') {
                     inDoubleQuotes = false;
                     hasContent = true;
                 } else {
