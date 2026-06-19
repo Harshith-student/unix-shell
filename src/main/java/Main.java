@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 
 public class Main {
+    private static String currentDir = System.getProperty("user.dir");
+
     public static void main(String[] args) throws Exception {
          
          Scanner sc = new Scanner(System.in);
@@ -24,10 +26,31 @@ public class Main {
             } else if (cmd.equals("type")) {
                 System.out.println(type(rem));
             } else if (cmd.equals("pwd")) {
-                System.out.println(System.getProperty("user.dir"));
+                System.out.println(currentDir);
+            } else if (cmd.equals("cd")) {
+                String targetPath = rem;
+                if (targetPath.isEmpty() || targetPath.equals("~")) {
+                    targetPath = System.getenv("HOME");
+                    if (targetPath == null) {
+                        targetPath = System.getProperty("user.home");
+                    }
+                }
+                File newDir = new File(targetPath);
+                if (!newDir.isAbsolute() && !targetPath.startsWith("/")) {
+                    newDir = new File(currentDir, targetPath);
+                }
+                try {
+                    if (newDir.exists() && newDir.isDirectory()) {
+                        currentDir = newDir.getCanonicalPath();
+                    } else {
+                        System.out.println("cd: " + targetPath + ": No such file or directory");
+                    }
+                } catch (Exception e) {
+                    System.out.println("cd: " + targetPath + ": No such file or directory");
+                }
             }
             else if(getExecutable(cmd) != null){
-                Process process = Runtime.getRuntime().exec(command.split(" "));
+                Process process = Runtime.getRuntime().exec(command.split(" "), null, new File(currentDir));
                 process.getInputStream().transferTo(System.out);
             }
             else {
@@ -37,7 +60,7 @@ public class Main {
          sc.close();
     }
     public static String type(String command){
-        String commands[] = {"exit","type","echo","pwd"};
+        String commands[] = {"exit","type","echo","pwd","cd"};
         String path = System.getenv("PATH");
         String pathDirs[] = path.split(File.pathSeparator);
 
