@@ -28,7 +28,6 @@ public class Main {
     }
 
     private static List<Job> jobsList = new ArrayList<>();
-    private static int nextJobNumber = 1;
 
     public static void main(String[] args) throws Exception {
          
@@ -213,7 +212,16 @@ public class Main {
                     }
                     Process process = pb.start();
                     if (isBackground) {
-                        int jobNum = nextJobNumber++;
+                        int jobNum = 1;
+                        if (!jobsList.isEmpty()) {
+                            int maxJobNum = 0;
+                            for (Job j : jobsList) {
+                                if (j.jobNumber > maxJobNum) {
+                                    maxJobNum = j.jobNumber;
+                                }
+                            }
+                            jobNum = maxJobNum + 1;
+                        }
                         long pid = process.pid();
                         System.out.println("[" + jobNum + "] " + pid);
                         jobsList.add(new Job(jobNum, pid, "Running", parsedArgs, process));
