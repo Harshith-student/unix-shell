@@ -138,7 +138,13 @@ public class Main {
                     hasContent = true;
                 }
             } else {
-                if (c == '\'') {
+                if (c == '\\') {
+                    if (i + 1 < input.length()) {
+                        currentArg.append(input.charAt(i + 1));
+                        i++;
+                        hasContent = true;
+                    }
+                } else if (c == '\'') {
                     inSingleQuotes = true;
                 } else if (c == '"') {
                     inDoubleQuotes = true;
