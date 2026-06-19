@@ -2,6 +2,8 @@ import java.io.File;
 import java.util.Scanner;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
+import java.util.ArrayList;
 
 public class Main {
     private static String currentDir = System.getProperty("user.dir");
@@ -12,23 +14,38 @@ public class Main {
         String path = System.getenv("PATH");
         String pathDirs[] = path.split(File.pathSeparator);
          
-         while (true) {
+          while (true) {
             System.out.print("$ ");
             String command = sc.nextLine();
 
-            String cmd = command.indexOf(" ") == -1 ? command : command.substring(0, command.indexOf(" "));
-            String rem = command.indexOf(" ") == -1 ? "" : command.substring(command.indexOf(" ")+1);
+            List<String> parsedArgs = parseArguments(command);
+            if (parsedArgs.isEmpty()) {
+                continue;
+            }
+
+            String cmd = parsedArgs.get(0);
 
             if (cmd.equals("exit")) {
                 break;
             } else if (cmd.equals("echo")) {
-                System.out.println(rem);
+                StringBuilder sb = new StringBuilder();
+                for (int i = 1; i < parsedArgs.size(); i++) {
+                    sb.append(parsedArgs.get(i));
+                    if (i < parsedArgs.size() - 1) {
+                        sb.append(" ");
+                    }
+                }
+                System.out.println(sb.toString());
             } else if (cmd.equals("type")) {
-                System.out.println(type(rem));
+                if (parsedArgs.size() > 1) {
+                    System.out.println(type(parsedArgs.get(1)));
+                } else {
+                    System.out.println("type: missing argument");
+                }
             } else if (cmd.equals("pwd")) {
                 System.out.println(currentDir);
             } else if (cmd.equals("cd")) {
-                String targetPath = rem;
+                String targetPath = parsedArgs.size() > 1 ? parsedArgs.get(1) : "~";
                 if (targetPath.isEmpty() || targetPath.equals("~")) {
                     targetPath = System.getenv("HOME");
                     if (targetPath == null) {
@@ -50,11 +67,12 @@ public class Main {
                 }
             }
             else if(getExecutable(cmd) != null){
-                Process process = Runtime.getRuntime().exec(command.split(" "), null, new File(currentDir));
+                String[] cmdArray = parsedArgs.toArray(new String[0]);
+                Process process = Runtime.getRuntime().exec(cmdArray, null, new File(currentDir));
                 process.getInputStream().transferTo(System.out);
             }
             else {
-                System.out.println(command + ": command not found");
+                System.out.println(cmd + ": command not found");
             }
         }
          sc.close();
@@ -91,5 +109,45 @@ public class Main {
         }
         return null;
 
+    }
+
+    public static List<String> parseArguments(String input) {
+        List<String> args = new ArrayList<>();
+        StringBuilder currentArg = new StringBuilder();
+        boolean inSingleQuotes = false;
+        boolean hasContent = false;
+
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+
+            if (inSingleQuotes) {
+                if (c == '\'') {
+                    inSingleQuotes = false;
+                    hasContent = true;
+                } else {
+                    currentArg.append(c);
+                    hasContent = true;
+                }
+            } else {
+                if (c == '\'') {
+                    inSingleQuotes = true;
+                } else if (Character.isWhitespace(c)) {
+                    if (hasContent || currentArg.length() > 0) {
+                        args.add(currentArg.toString());
+                        currentArg.setLength(0);
+                        hasContent = false;
+                    }
+                } else {
+                    currentArg.append(c);
+                    hasContent = true;
+                }
+            }
+        }
+
+        if (hasContent || currentArg.length() > 0) {
+            args.add(currentArg.toString());
+        }
+
+        return args;
     }
 }
