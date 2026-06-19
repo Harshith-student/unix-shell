@@ -54,6 +54,115 @@ public class Main {
                 }
             }
 
+            int pipeIdx = -1;
+            for (int i = 0; i < tokens.size(); i++) {
+                Token t = tokens.get(i);
+                if (!t.quoted && t.text.equals("|")) {
+                    pipeIdx = i;
+                    break;
+                }
+            }
+
+            if (pipeIdx != -1) {
+                List<Token> tokens1 = new ArrayList<>(tokens.subList(0, pipeIdx));
+                List<Token> tokens2 = new ArrayList<>(tokens.subList(pipeIdx + 1, tokens.size()));
+
+                CommandParsed cp1 = parseRedirectsAndArgs(tokens1);
+                CommandParsed cp2 = parseRedirectsAndArgs(tokens2);
+
+                if (!cp1.args.isEmpty() && !cp2.args.isEmpty()) {
+                    String cmd1 = cp1.args.get(0);
+                    String cmd2 = cp2.args.get(0);
+
+                    if (getExecutable(cmd1) != null && getExecutable(cmd2) != null) {
+                        ProcessBuilder pb1 = new ProcessBuilder(cp1.args);
+                        pb1.directory(new File(currentDir));
+                        if (cp1.redirectErrFile != null) {
+                            File file = new File(cp1.redirectErrFile);
+                            if (!file.isAbsolute() && !cp1.redirectErrFile.startsWith("/")) {
+                                file = new File(currentDir, cp1.redirectErrFile);
+                            }
+                            if (cp1.appendErr) {
+                                pb1.redirectError(ProcessBuilder.Redirect.appendTo(file));
+                            } else {
+                                pb1.redirectError(ProcessBuilder.Redirect.to(file));
+                            }
+                        } else {
+                            pb1.redirectError(ProcessBuilder.Redirect.INHERIT);
+                        }
+
+                        ProcessBuilder pb2 = new ProcessBuilder(cp2.args);
+                        pb2.directory(new File(currentDir));
+                        if (cp2.redirectFile != null) {
+                            File file = new File(cp2.redirectFile);
+                            if (!file.isAbsolute() && !cp2.redirectFile.startsWith("/")) {
+                                file = new File(currentDir, cp2.redirectFile);
+                            }
+                            if (cp2.appendOut) {
+                                pb2.redirectOutput(ProcessBuilder.Redirect.appendTo(file));
+                            } else {
+                                pb2.redirectOutput(ProcessBuilder.Redirect.to(file));
+                            }
+                        } else {
+                            pb2.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+                        }
+
+                        if (cp2.redirectErrFile != null) {
+                            File file = new File(cp2.redirectErrFile);
+                            if (!file.isAbsolute() && !cp2.redirectErrFile.startsWith("/")) {
+                                file = new File(currentDir, cp2.redirectErrFile);
+                            }
+                            if (cp2.appendErr) {
+                                pb2.redirectError(ProcessBuilder.Redirect.appendTo(file));
+                            } else {
+                                pb2.redirectError(ProcessBuilder.Redirect.to(file));
+                            }
+                        } else {
+                            pb2.redirectError(ProcessBuilder.Redirect.INHERIT);
+                        }
+
+                        try {
+                            List<Process> processes = ProcessBuilder.startPipeline(Arrays.asList(pb1, pb2));
+                            if (isBackground) {
+                                int jobNum = 1;
+                                if (!jobsList.isEmpty()) {
+                                    int maxJobNum = 0;
+                                    for (Job j : jobsList) {
+                                        if (j.jobNumber > maxJobNum) {
+                                            maxJobNum = j.jobNumber;
+                                        }
+                                    }
+                                    jobNum = maxJobNum + 1;
+                                }
+                                Process lastProcess = processes.get(processes.size() - 1);
+                                long pid = lastProcess.pid();
+                                System.out.println("[" + jobNum + "] " + pid);
+                                List<String> fullCmd = new ArrayList<>();
+                                fullCmd.addAll(cp1.args);
+                                fullCmd.add("|");
+                                fullCmd.addAll(cp2.args);
+                                jobsList.add(new Job(jobNum, pid, "Running", fullCmd, lastProcess));
+                            } else {
+                                for (Process p : processes) {
+                                    p.waitFor();
+                                }
+                            }
+                        } catch (IOException | InterruptedException e) {
+                            System.out.println("Pipeline execution failed: " + e.getMessage());
+                        }
+                    } else {
+                        if (getExecutable(cmd1) == null) {
+                            System.out.println(cmd1 + ": command not found");
+                        } else {
+                            System.out.println(cmd2 + ": command not found");
+                        }
+                    }
+                } else {
+                    System.out.println("Invalid pipeline command");
+                }
+                continue;
+            }
+
             String redirectFile = null;
             String redirectErrFile = null;
             boolean appendOut = false;
@@ -278,6 +387,58 @@ public class Main {
         jobsList = nextJobsList;
     }
 
+    public static class CommandParsed {
+        public List<String> args = new ArrayList<>();
+        public String redirectFile = null;
+        public String redirectErrFile = null;
+        public boolean appendOut = false;
+        public boolean appendErr = false;
+    }
+
+    public static CommandParsed parseRedirectsAndArgs(List<Token> tokens) {
+        CommandParsed cp = new CommandParsed();
+        for (int i = 0; i < tokens.size(); i++) {
+            Token t = tokens.get(i);
+            if (!t.quoted && (t.text.equals(">") || t.text.equals("1>"))) {
+                if (i + 1 < tokens.size()) {
+                    cp.redirectFile = tokens.get(i + 1).text;
+                    cp.appendOut = false;
+                    tokens.remove(i + 1);
+                    tokens.remove(i);
+                    i -= 1;
+                }
+            } else if (!t.quoted && (t.text.equals(">>") || t.text.equals("1>>"))) {
+                if (i + 1 < tokens.size()) {
+                    cp.redirectFile = tokens.get(i + 1).text;
+                    cp.appendOut = true;
+                    tokens.remove(i + 1);
+                    tokens.remove(i);
+                    i -= 1;
+                }
+            } else if (!t.quoted && t.text.equals("2>")) {
+                if (i + 1 < tokens.size()) {
+                    cp.redirectErrFile = tokens.get(i + 1).text;
+                    cp.appendErr = false;
+                    tokens.remove(i + 1);
+                    tokens.remove(i);
+                    i -= 1;
+                }
+            } else if (!t.quoted && t.text.equals("2>>")) {
+                if (i + 1 < tokens.size()) {
+                    cp.redirectErrFile = tokens.get(i + 1).text;
+                    cp.appendErr = true;
+                    tokens.remove(i + 1);
+                    tokens.remove(i);
+                    i -= 1;
+                }
+            }
+        }
+        for (Token t : tokens) {
+            cp.args.add(t.text);
+        }
+        return cp;
+    }
+
     public static String type(String command){
         String commands[] = {"exit","type","echo","pwd","cd","jobs"};
         String path = System.getenv("PATH");
@@ -294,6 +455,12 @@ public class Main {
             if(file.exists() && file.canExecute()){
                 return command+" is "+ file.getAbsolutePath();
             }
+            if (!command.endsWith(".exe")) {
+                File fileExe = new File(pathDirs[i], command + ".exe");
+                if (fileExe.exists() && fileExe.canExecute()) {
+                    return command+" is "+ fileExe.getAbsolutePath();
+                }
+            }
         }
         return command+": not found";
         
@@ -306,6 +473,12 @@ public class Main {
             File file = new File(dir, cmd);
             if(file.exists() && file.canExecute()){
                 return file.getAbsolutePath();
+            }
+            if (!cmd.endsWith(".exe")) {
+                File fileExe = new File(dir, cmd + ".exe");
+                if (fileExe.exists() && fileExe.canExecute()) {
+                    return fileExe.getAbsolutePath();
+                }
             }
         }
         return null;
