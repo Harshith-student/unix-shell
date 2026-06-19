@@ -178,11 +178,14 @@ public class Main {
                         System.out.println("cd: " + targetPath + ": No such file or directory");
                     }
                 } else if (cmd.equals("jobs")) {
-                    for (int i = 0; i < jobsList.size(); i++) {
+                    int size = jobsList.size();
+                    for (int i = 0; i < size; i++) {
                         Job job = jobsList.get(i);
                         char marker = ' ';
-                        if (i == jobsList.size() - 1) {
+                        if (i == size - 1) {
                             marker = '+';
+                        } else if (i == size - 2) {
+                            marker = '-';
                         }
                         String cmdStr = String.join(" ", job.command) + " &";
                         System.out.printf("[%d]%c  %-24s%s\n", job.jobNumber, marker, job.status, cmdStr);
