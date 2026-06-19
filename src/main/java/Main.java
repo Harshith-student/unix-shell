@@ -149,6 +149,8 @@ public class Main {
                     } catch (Exception e) {
                         System.out.println("cd: " + targetPath + ": No such file or directory");
                     }
+                } else if (cmd.equals("jobs")) {
+                    // Empty implementation for jobs command
                 }
                 else if(getExecutable(cmd) != null){
                     ProcessBuilder pb = new ProcessBuilder(parsedArgs);
@@ -207,7 +209,7 @@ public class Main {
          sc.close();
     }
     public static String type(String command){
-        String commands[] = {"exit","type","echo","pwd","cd"};
+        String commands[] = {"exit","type","echo","pwd","cd","jobs"};
         String path = System.getenv("PATH");
         String pathDirs[] = path.split(File.pathSeparator);
 
